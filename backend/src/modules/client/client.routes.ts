@@ -57,6 +57,7 @@ import {
   serializeAttachments,
   parseAttachments,
   pickField,
+  deleteTicketAttachments,
 } from "../ticket/attachments.js";
 import { validateEmailForSignup } from "../signup-protection/email-blocklist.js";
 
@@ -7909,6 +7910,22 @@ clientRouter.post("/tickets/:id/messages", uploadTicketAttachment.array("files",
     attachments: parseAttachments(msg.attachments),
     createdAt: msg.createdAt.toISOString(),
   });
+});
+
+// Удаление тикета клиентом
+clientRouter.delete("/tickets/:id", async (req, res) => {
+  if (!(await ensureTicketsEnabled(res))) return;
+  const clientId = (req as unknown as { client: { id: string } }).client.id;
+  const ticket = await prisma.ticket.findFirst({
+    where: { id: req.params.id, clientId },
+    include: { messages: { select: { attachments: true } } },
+  });
+  if (!ticket) return res.status(404).json({ message: "Тикет не найден" });
+
+  await deleteTicketAttachments(ticket.messages.map((m) => m.attachments));
+  await prisma.ticket.delete({ where: { id: ticket.id } });
+
+  return res.json({ success: true, id: ticket.id });
 });
 
 // Публичный конфиг для бота, mini app, сайта (без паролей и секретов)

@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Plus, Mail, ChevronRight, Loader2 } from "lucide-react";
+import { Plus, Mail, Loader2, Trash2 } from "lucide-react";
 import { useClientAuth } from "@/contexts/client-auth";
 import { api } from "@/lib/api";
 import { StadiumButton } from "@/components/stealth/stadium-button";
@@ -65,6 +65,18 @@ export function StealthTickets() {
   const goNew = () => setShowNew(true);
   const goTicket = (id: string) => setChatTicketId(id);
 
+  async function handleDeleteTicket(id: string, subject?: string) {
+    if (!state.token) return;
+    const msg = subject ? `Удалить обращение «${subject}»? Все сообщения будут удалены.` : "Удалить обращение?";
+    if (!confirm(msg)) return;
+    try {
+      await api.deleteTicket(state.token, id);
+      setItems((prev) => prev ? prev.filter((t) => t.id !== id) : []);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Не удалось удалить обращение");
+    }
+  }
+
   return (
     <div className="px-4 pt-2 space-y-4 pb-2">
       {/* Top action — outline pill */}
@@ -94,10 +106,10 @@ export function StealthTickets() {
       ) : (
         <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 overflow-hidden divide-y divide-white/[0.04]">
           {items.map((t) => (
-            <button
+            <div
               key={t.id}
               onClick={() => goTicket(t.id)}
-              className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-white/[0.03] transition"
+              className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-white/[0.03] transition cursor-pointer"
             >
               <div className="h-10 w-10 rounded-xl bg-zinc-800/60 border border-white/10 flex items-center justify-center shrink-0">
                 <Mail className="h-4 w-4 text-zinc-300" />
@@ -113,8 +125,18 @@ export function StealthTickets() {
                   <span className="text-zinc-500">{fmtDate(t.updatedAt)}</span>
                 </div>
               </div>
-              <ChevronRight className="h-4 w-4 text-zinc-500 shrink-0" />
-            </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteTicket(t.id, t.subject);
+                }}
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition shrink-0"
+                title="Удалить обращение"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           ))}
         </div>
       )}

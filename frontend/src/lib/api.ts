@@ -1402,6 +1402,10 @@ export const api = {
   async patchAdminTicket(token: string, id: string, data: { status: "open" | "closed" }): Promise<{ id: string; status: string }> {
     return request(`/admin/tickets/${id}`, { method: "PATCH", body: JSON.stringify(data), token });
   },
+  /** Админ: удалить тикет */
+  async deleteAdminTicket(token: string, id: string): Promise<{ success: boolean; id: string }> {
+    return request(`/admin/tickets/${id}`, { method: "DELETE", token });
+  },
   /** Админ: ответ в тикет (поддержка). Можно приложить до 5 фото — тогда уходит multipart/form-data. */
   async postAdminTicketMessage(
     token: string,
@@ -2666,6 +2670,10 @@ export const api = {
       body: JSON.stringify({ content: data.content }),
       token,
     });
+  },
+  /** Клиент: удалить свой тикет */
+  async deleteTicket(token: string, id: string): Promise<{ success: boolean; id: string }> {
+    return request(`/client/tickets/${id}`, { method: "DELETE", token });
   },
 
   /** AI Чат (Groq) */
