@@ -2895,6 +2895,41 @@ export const api = {
   async marketplaceHubDeleteCategory(token: string, id: string): Promise<{ ok: boolean }> {
     return request(`/admin/marketplace/hub/categories/${encodeURIComponent(id)}`, { method: "DELETE", token });
   },
+
+  // ─── Рулетка (Колесо Фортуны) ───
+  async clientGetRoulette(token: string): Promise<{
+    enabled: boolean;
+    cooldownHours: number;
+    canSpin: boolean;
+    nextSpinAt: string | null;
+    secondsLeft: number;
+    sectors: { id: string; type: string; value: number; label: string; color: string; icon: string }[];
+    recentSpins: { id: string; rewardType: string; rewardValue: number; rewardLabel: string; sectorId: string; createdAt: string }[];
+  }> {
+    return request("/client/roulette", { token });
+  },
+
+  async clientSpinRoulette(token: string): Promise<{
+    spinId: string;
+    sectorId: string;
+    reward: { id: string; type: string; value: number; label: string; color: string; icon: string };
+    nextSpinAt: string;
+  }> {
+    return request("/client/roulette/spin", { method: "POST", token });
+  },
+
+  async getAdminRoulette(token: string): Promise<{
+    settings: { enabled: boolean; cooldownHours: number; sectors: any[] };
+    totalSpins: number;
+    spinsByType: any[];
+    recentSpins: any[];
+  }> {
+    return request("/admin/roulette", { token });
+  },
+
+  async updateAdminRoulette(token: string, data: any): Promise<any> {
+    return request("/admin/roulette", { method: "PUT", body: JSON.stringify(data), token });
+  },
 };
 
 export type MarketplaceCurrency = "USD" | "RUB" | "EUR" | "USDT";
@@ -3223,6 +3258,7 @@ export type UpdateSettingsPayload = {
   logoBot?: string | null;
   favicon?: string | null;
   cabinetDesign?: "classic" | "stealth" | "aurora";
+  rouletteEnabled?: boolean;
   remnaClientUrl?: string | null;
   smtpHost?: string | null;
   smtpPort?: number;
@@ -5258,6 +5294,7 @@ export interface PublicConfig {
   smtpConfigured?: boolean;
   useRemnaSubscriptionPage?: boolean;
   aiChatEnabled?: boolean;
+  rouletteEnabled?: boolean;
   customBuildConfig?: {
     enabled: true;
     pricePerDay: number;
