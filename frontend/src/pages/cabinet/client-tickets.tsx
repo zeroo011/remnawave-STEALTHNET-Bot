@@ -1,6 +1,7 @@
 import { AuroraTickets } from "./aurora/aurora-tickets";
 import { useEffect, useRef, useState } from "react";
 import { MessageSquarePlus, Inbox, Loader2, Send, ArrowLeft, CircleDot, CircleCheck, User, Paperclip, X as XIcon, ImageIcon, Trash2 } from "lucide-react";
+import { askConfirm } from "@/lib/confirm";
 import { useClientAuth } from "@/contexts/client-auth";
 import { api, type TicketAttachmentDto, type TicketMessageDto } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -190,20 +191,21 @@ function ClassicTicketsPage() {
       .finally(() => setCreateSending(false));
   };
 
-  const deleteCurrentTicket = (id?: string) => {
+  const deleteCurrentTicket = async (id?: string) => {
     const targetId = id || detailId;
     if (!token || !targetId) return;
-    if (!confirm("Удалить это обращение навсегда? Все сообщения будут удалены.")) return;
-    api
-      .deleteTicket(token, targetId)
-      .then(() => {
-        setList((prev) => prev.filter((t) => t.id !== targetId));
-        if (detailId === targetId) {
-          setDetailId(null);
-          setDetail(null);
-        }
-      })
-      .catch((e) => alert(e instanceof Error ? e.message : "Не удалось удалить обращение"));
+    const ok = await askConfirm("Удалить это обращение навсегда? Все сообщения будут удалены.");
+    if (!ok) return;
+    try {
+      await api.deleteTicket(token, targetId);
+      setList((prev) => prev.filter((t) => t.id !== targetId));
+      if (detailId === targetId) {
+        setDetailId(null);
+        setDetail(null);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Не удалось удалить обращение");
+    }
   };
 
   const formatDate = (s: string) => {

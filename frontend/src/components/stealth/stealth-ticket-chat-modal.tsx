@@ -14,6 +14,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Send, Loader2, AlertCircle, Paperclip, ImageIcon, X as XIcon, RefreshCw, Trash2 } from "lucide-react";
+import { askConfirm } from "@/lib/confirm";
 import { useClientAuth } from "@/contexts/client-auth";
 import { api, type TicketMessageDto } from "@/lib/api";
 import { StealthModal } from "./stealth-modal";
@@ -127,7 +128,8 @@ export function StealthTicketChatModal({ open, ticketId, onClose }: Props) {
 
   async function handleDelete() {
     if (!state.token || !ticketId) return;
-    if (!confirm("Удалить это обращение навсегда? Все сообщения будут удалены.")) return;
+    const ok = await askConfirm("Удалить это обращение навсегда? Все сообщения будут удалены.");
+    if (!ok) return;
     try {
       await api.deleteTicket(state.token, ticketId);
       onClose();

@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, MessageCircle, AlertCircle, Trash2 } from "lucide-react";
+import { askConfirm } from "@/lib/confirm";
 import { useClientAuth } from "@/contexts/client-auth";
 import { api } from "@/lib/api";
 import { AuroraNewTicketSheet } from "@/components/aurora/aurora-new-ticket-sheet";
@@ -75,10 +76,12 @@ export function AuroraTickets() {
   async function handleDeleteTicket(id: string, subject?: string) {
     if (!state.token) return;
     const msg = subject ? `Удалить обращение «${subject}»? Все сообщения будут удалены.` : "Удалить обращение?";
-    if (!confirm(msg)) return;
+    const ok = await askConfirm(msg);
+    if (!ok) return;
     try {
       await api.deleteTicket(state.token, id);
-      setItems((prev) => prev ? prev.filter((t) => t.id !== id) : []);
+      setItems((prev) => (prev ? prev.filter((t) => t.id !== id) : []));
+      if (chatTicketId === id) setChatTicketId(null);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Не удалось удалить обращение");
     }
@@ -143,11 +146,14 @@ export function AuroraTickets() {
               </div>
               <button
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteTicket(t.id, t.subject);
+                  e.preventDefault();
+                  void handleDeleteTicket(t.id, t.subject);
                 }}
-                className="h-8 w-8 flex items-center justify-center rounded-full text-[var(--au-muted)] hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                className="h-9 w-9 flex items-center justify-center rounded-full text-[var(--au-muted)] hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
                 title="Удалить обращение"
               >
                 <Trash2 className="h-4 w-4" />

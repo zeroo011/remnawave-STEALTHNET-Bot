@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Mail, Loader2, Trash2 } from "lucide-react";
+import { askConfirm } from "@/lib/confirm";
 import { useClientAuth } from "@/contexts/client-auth";
 import { api } from "@/lib/api";
 import { StadiumButton } from "@/components/stealth/stadium-button";
@@ -68,10 +69,12 @@ export function StealthTickets() {
   async function handleDeleteTicket(id: string, subject?: string) {
     if (!state.token) return;
     const msg = subject ? `Удалить обращение «${subject}»? Все сообщения будут удалены.` : "Удалить обращение?";
-    if (!confirm(msg)) return;
+    const ok = await askConfirm(msg);
+    if (!ok) return;
     try {
       await api.deleteTicket(state.token, id);
       setItems((prev) => prev ? prev.filter((t) => t.id !== id) : []);
+      if (chatTicketId === id) setChatTicketId(null);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Не удалось удалить обращение");
     }
@@ -127,9 +130,12 @@ export function StealthTickets() {
               </div>
               <button
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteTicket(t.id, t.subject);
+                  e.preventDefault();
+                  void handleDeleteTicket(t.id, t.subject);
                 }}
                 className="h-8 w-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition shrink-0"
                 title="Удалить обращение"
