@@ -187,7 +187,15 @@ export async function getRouletteStatus(clientId: string) {
   };
 }
 
+// In-flight блокировка против race condition атак параллельными запросами
+const activeSpins = new Set<string>();
+
 export async function spinRoulette(clientId: string) {
+  if (activeSpins.has(clientId)) {
+    throw new Error("Вращение уже обрабатывается, пожалуйста, подождите");
+  }
+  activeSpins.add(clientId);
+  try {
   const settings = await getRouletteSettings();
   if (!settings.enabled) {
     throw new Error("Рулетка временно отключена");
@@ -312,6 +320,9 @@ export async function spinRoulette(clientId: string) {
     },
     nextSpinAt,
   };
+  } finally {
+    activeSpins.delete(clientId);
+  }
 }
 
 export async function getAdminRouletteStats() {

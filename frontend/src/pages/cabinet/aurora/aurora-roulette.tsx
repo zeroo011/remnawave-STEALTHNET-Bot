@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Sparkles, Clock, Gift, History, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/client-auth";
+import { useInvalidateClientData } from "@/lib/queries";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/toast";
 import { RouletteWheel, type WheelSector } from "@/components/roulette/roulette-wheel";
@@ -49,18 +50,27 @@ function formatDate(iso: string): string {
 export function AuroraRoulette() {
   const navigate = useNavigate();
   const { state, refreshProfile } = useClientAuth();
+  const invalidateClientData = useInvalidateClientData();
   const [data, setData] = useState<RouletteStatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const [spinning, setSpinning] = useState(false);
   const [winSector, setWinSector] = useState<WheelSector | null>(null);
 
+  // Для защиты от манипуляций системным временем на клиенте
+  // храним начальное серверное значение и точку отсчета через монотонный performance.now()
+  const serverSecondsRef = useRef<number>(0);
+  const startPerfRef = useRef<number>(0);
+
   const loadStatus = useCallback(async () => {
     if (!state.token) return;
     try {
       const res = await api.clientGetRoulette(state.token);
       setData(res as RouletteStatusData);
-      setSecondsLeft(res.secondsLeft || 0);
+      const sec = res.secondsLeft || 0;
+      serverSecondsRef.current = sec;
+      startPerfRef.current = performance.now();
+      setSecondsLeft(sec);
     } catch (e: any) {
       toast.error("Ошибка загрузки", e?.message || "Не удалось загрузить данные рулетки");
     } finally {
@@ -72,18 +82,34 @@ export function AuroraRoulette() {
     loadStatus();
   }, [loadStatus]);
 
-  // Таймер обратного отсчета
+  // При возвращении в приложение / вкладку (после минимизации или перевода часов на телефоне)
+  // немедленно перезапрашиваем авторитарный статус с сервера
+  useEffect(() => {
+    const handleSync = () => {
+      if (document.visibilityState === "visible") {
+        loadStatus();
+      }
+    };
+    document.addEventListener("visibilitychange", handleSync);
+    window.addEventListener("focus", handleSync);
+    return () => {
+      document.removeEventListener("visibilitychange", handleSync);
+      window.removeEventListener("focus", handleSync);
+    };
+  }, [loadStatus]);
+
+  // Таймер обратного отсчета на основе монотонного времени performance.now().
+  // Перевод часов на телефоне вперед или назад никак не влияет на performance.now()
   useEffect(() => {
     if (secondsLeft <= 0) return;
     const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          loadStatus();
-          return 0;
-        }
-        return prev - 1;
-      });
+      const elapsed = Math.floor((performance.now() - startPerfRef.current) / 1000);
+      const remaining = Math.max(0, serverSecondsRef.current - elapsed);
+      setSecondsLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        loadStatus();
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, [secondsLeft, loadStatus]);
@@ -93,11 +119,14 @@ export function AuroraRoulette() {
     setSpinning(true);
     try {
       const res = await api.clientSpinRoulette(state.token);
+      invalidateClientData();
       refreshProfile().catch(() => {});
       return res.sectorId;
     } catch (e: any) {
       setSpinning(false);
       toast.error("Ошибка", e?.message || "Не удалось совершить вращение");
+      // Перепроверяем статус с сервера на случай рассинхронизации или кулдауна
+      loadStatus();
       return null;
     }
   };
@@ -105,6 +134,8 @@ export function AuroraRoulette() {
   const handleFinished = (sector: WheelSector) => {
     setSpinning(false);
     setWinSector(sector);
+    invalidateClientData();
+    refreshProfile().catch(() => {});
     loadStatus();
   };
 

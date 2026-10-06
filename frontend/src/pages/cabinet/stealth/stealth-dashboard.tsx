@@ -22,6 +22,7 @@ import { StealthDevicesModal } from "@/components/stealth/stealth-devices-modal"
 import { StealthTrialsModal } from "@/components/stealth/stealth-trials-modal";
 import { ExtendSubscriptionDialog } from "@/components/payment/extend-subscription-dialog";
 import { useClientAuth } from "@/contexts/client-auth";
+import { useCabinetConfig } from "@/contexts/cabinet-config";
 import { api } from "@/lib/api";
 import { StadiumButton } from "@/components/stealth/stadium-button";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,7 @@ function unwrapRemnaSub(sub: unknown): Record<string, unknown> | null {
 
 export function StealthDashboard() {
   const { state, refreshProfile } = useClientAuth();
+  const config = useCabinetConfig();
   const [heroImage, setHeroImage] = useState<string | null>(null);
   useEffect(() => {
     getPublicConfigCached()
@@ -501,19 +503,21 @@ export function StealthDashboard() {
             <span className="flex-1 text-left">Установить и настроить VPN</span>
           </StadiumButton>
 
-          <StadiumButton
-            variant="highlight"
-            size="md"
-            iconLeft={
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-saccent-500/15 border border-saccent-500/30">
-                <Sparkles className="h-3.5 w-3.5 text-saccent-400" />
-              </span>
-            }
-            iconRight={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-            onClick={() => navigate("/cabinet/roulette")}
-          >
-            <span className="flex-1 text-left">🎰 Рулетка удачи</span>
-          </StadiumButton>
+          {config?.rouletteEnabled !== false && (
+            <StadiumButton
+              variant="highlight"
+              size="md"
+              iconLeft={
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-saccent-500/15 border border-saccent-500/30">
+                  <Sparkles className="h-3.5 w-3.5 text-saccent-400" />
+                </span>
+              }
+              iconRight={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onClick={() => navigate("/cabinet/roulette")}
+            >
+              <span className="flex-1 text-left">🎰 Рулетка удачи</span>
+            </StadiumButton>
+          )}
 
           <div className="grid grid-cols-2 gap-2.5">
             <StadiumButton
