@@ -107,7 +107,27 @@ export async function updateRouletteSettings(params: {
     });
   }
   if (params.sectors !== undefined && Array.isArray(params.sectors)) {
-    const val = JSON.stringify(params.sectors);
+    const validTypes = new Set(["days", "balance", "traffic", "discount", "empty"]);
+    const cleanedSectors: RouletteSector[] = params.sectors.map((s, idx) => {
+      const type = (validTypes.has(s.type) ? s.type : "balance") as RouletteRewardType;
+      const value = type === "empty" ? 0 : Math.max(0, Number(s.value) || 0);
+      const weight = Math.max(0, Number(s.weight) || 0);
+      const label = typeof s.label === "string" && s.label.trim() ? s.label.trim().slice(0, 60) : `Сектор ${idx + 1}`;
+      const color = typeof s.color === "string" && s.color.startsWith("#") ? s.color : "#4f46e5";
+      const id = typeof s.id === "string" && s.id.trim() ? s.id.trim() : `s_${idx + 1}_${Date.now()}`;
+      const defaultIcon = type === "days" ? "calendar" : type === "balance" ? "wallet" : type === "traffic" ? "wifi" : type === "discount" ? "tag" : "frown";
+      return {
+        id,
+        type,
+        value,
+        label,
+        weight,
+        color,
+        icon: s.icon || defaultIcon,
+      };
+    });
+
+    const val = JSON.stringify(cleanedSectors);
     await prisma.systemSetting.upsert({
       where: { key: "roulette_sectors" },
       create: { key: "roulette_sectors", value: val },

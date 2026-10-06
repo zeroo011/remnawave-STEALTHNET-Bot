@@ -9,24 +9,27 @@ export interface WheelSector {
   label: string;
   color: string;
   icon?: string;
+  weight?: number;
 }
 
 interface RouletteWheelProps {
   sectors: WheelSector[];
-  canSpin: boolean;
-  spinning: boolean;
-  onSpin: () => Promise<string | null>; // returns won sectorId
+  canSpin?: boolean;
+  spinning?: boolean;
+  onSpin?: () => Promise<string | null>;
   onFinished?: (sector: WheelSector) => void;
   variant?: "aurora" | "stealth" | "classic";
+  size?: "sm" | "md";
 }
 
 export function RouletteWheel({
   sectors,
-  canSpin,
-  spinning: externalSpinning,
+  canSpin = false,
+  spinning: externalSpinning = false,
   onSpin,
   onFinished,
   variant = "aurora",
+  size = "md",
 }: RouletteWheelProps) {
   const [rotation, setRotation] = useState(0);
   const [internalSpinning, setInternalSpinning] = useState(false);
@@ -35,7 +38,6 @@ export function RouletteWheel({
   const numSectors = Math.max(sectors.length, 1);
   const sectorAngle = 360 / numSectors;
 
-  // Haptics helper
   const triggerHaptic = (type: "light" | "medium" | "heavy" | "success") => {
     try {
       const haptic = (window as any).Telegram?.WebApp?.HapticFeedback;
@@ -49,7 +51,34 @@ export function RouletteWheel({
   };
 
   const handleSpinClick = async () => {
-    if (!canSpin || internalSpinning || externalSpinning) return;
+    if (internalSpinning || externalSpinning) return;
+    
+    // Если onSpin не передан — демонстрационное вращение на случайный сектор
+    if (!onSpin) {
+      if (sectors.length === 0) return;
+      setInternalSpinning(true);
+      const randIdx = Math.floor(Math.random() * sectors.length);
+      const extraSpins = 5 * 360;
+      const currentNormalized = currentRotationRef.current % 360;
+      const targetSectorCenter = randIdx * sectorAngle + sectorAngle / 2;
+      const targetAngleWithinTurn = (360 - targetSectorCenter) % 360;
+      const delta = (targetAngleWithinTurn - currentNormalized + 360) % 360;
+      const totalTargetRotation = currentRotationRef.current + extraSpins + delta;
+
+      currentRotationRef.current = totalTargetRotation;
+      setRotation(totalTargetRotation);
+
+      setTimeout(() => {
+        setInternalSpinning(false);
+        if (onFinished && sectors[randIdx]) {
+          onFinished(sectors[randIdx]);
+        }
+      }, 5500);
+      return;
+    }
+
+    if (!canSpin) return;
+
     setInternalSpinning(true);
     triggerHaptic("medium");
 
@@ -60,14 +89,12 @@ export function RouletteWheel({
         return;
       }
 
-      // Находим индекс выигравшего сектора
       const targetIndex = sectors.findIndex((s) => s.id === wonSectorId);
       if (targetIndex === -1) {
         setInternalSpinning(false);
         return;
       }
 
-      // Вычисляем целевой угол
       const extraSpins = 6 * 360;
       const currentNormalized = currentRotationRef.current % 360;
       const targetSectorCenter = targetIndex * sectorAngle + sectorAngle / 2;
@@ -79,7 +106,6 @@ export function RouletteWheel({
       currentRotationRef.current = totalTargetRotation;
       setRotation(totalTargetRotation);
 
-      // Вибрация тиков во время вращения
       const startTime = Date.now();
       const spinDuration = 5500;
 
@@ -109,15 +135,24 @@ export function RouletteWheel({
   const defaultColors = [
     "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b",
     "#ec4899", "#8b5cf6", "#06b6d4", "#e11d48",
+    "#14b8a6", "#f97316", "#a855f7", "#3b82f6",
   ];
 
   const isStealth = variant === "stealth";
   const isAurora = variant === "aurora";
+  const isSmall = size === "sm";
 
   return (
     <div className="relative flex flex-col items-center justify-center p-2 select-none">
       {/* ── Обод и колесо ── */}
-      <div className="relative w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] flex items-center justify-center">
+      <div
+        className={cn(
+          "relative flex items-center justify-center",
+          isSmall
+            ? "w-[240px] h-[240px]"
+            : "w-[310px] h-[310px] sm:w-[350px] sm:h-[350px]"
+        )}
+      >
         {/* Неоновое свечение позади колеса */}
         <div
           className={cn(
@@ -132,8 +167,18 @@ export function RouletteWheel({
         />
 
         {/* Указатель сверху (стрелка) */}
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none drop-shadow-md">
-          <svg width="32" height="36" viewBox="0 0 32 36" fill="none">
+        <div
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none drop-shadow-md",
+            isSmall ? "-top-2" : "-top-3"
+          )}
+        >
+          <svg
+            width={isSmall ? "24" : "32"}
+            height={isSmall ? "28" : "36"}
+            viewBox="0 0 32 36"
+            fill="none"
+          >
             <path
               d="M13.4 33.6C14.6 35.4 17.4 35.4 18.6 33.6L30.2 16.2C31.7 13.9 30.1 10.8 27.4 10.8H4.6C1.9 10.8 0.3 13.9 1.8 16.2L13.4 33.6Z"
               fill={isStealth ? "#ff2357" : "#ef4444"}
@@ -146,7 +191,7 @@ export function RouletteWheel({
         {/* Внешнее кольцо колеса */}
         <div
           className={cn(
-            "relative w-full h-full rounded-full p-2.5 shadow-2xl transition-all duration-300",
+            "relative w-full h-full rounded-full p-2 shadow-2xl transition-all duration-300",
             isStealth
               ? "bg-zinc-950 border-4 border-white/10 shadow-[0_0_35px_rgba(0,0,0,0.8),0_0_15px_rgb(var(--stealth-accent)_/_0.3)]"
               : isAurora
@@ -188,26 +233,29 @@ export function RouletteWheel({
                 const sectorColor = sec.color || defaultColors[idx % defaultColors.length];
                 const midAngle = (idx * sectorAngle + sectorAngle / 2);
 
+                const fontSize = numSectors > 11 ? "8" : numSectors > 9 ? "9" : numSectors > 7 ? "10.5" : "12";
+
                 return (
-                  <g key={sec.id}>
+                  <g key={sec.id || idx}>
                     <path
                       d={pathData}
                       fill={sectorColor}
                       stroke="rgba(255,255,255,0.25)"
                       strokeWidth="1.5"
                     />
+                    {/* Текст сектора */}
                     <g transform={`rotate(${midAngle}, 150, 150)`}>
                       <text
                         x="150"
-                        y="42"
+                        y="38"
                         fill="#ffffff"
-                        fontSize={numSectors > 8 ? "9.5" : "11"}
+                        fontSize={fontSize}
                         fontWeight="800"
                         textAnchor="middle"
                         filter="url(#shadow)"
                         style={{ letterSpacing: "-0.01em" }}
                       >
-                        {sec.label.length > 16 ? sec.label.slice(0, 15) + "…" : sec.label}
+                        {sec.label.length > 17 ? sec.label.slice(0, 16) + "…" : sec.label}
                       </text>
                     </g>
                   </g>
@@ -220,26 +268,27 @@ export function RouletteWheel({
           <button
             type="button"
             onClick={handleSpinClick}
-            disabled={!canSpin || internalSpinning || externalSpinning}
+            disabled={(!canSpin && !!onSpin) || internalSpinning || externalSpinning}
             className={cn(
-              "absolute inset-0 m-auto w-20 h-20 sm:w-22 sm:h-22 rounded-full z-20",
-              "flex flex-col items-center justify-center font-extrabold text-xs sm:text-sm uppercase tracking-wider",
+              "absolute inset-0 m-auto rounded-full z-20",
+              "flex flex-col items-center justify-center font-extrabold uppercase tracking-wider",
               "transition-all duration-200 active:scale-95 shadow-xl select-none",
+              isSmall ? "w-16 h-16 text-xs" : "w-20 h-20 sm:w-22 sm:h-22 text-xs sm:text-sm",
               isStealth
                 ? "bg-zinc-900 border-2 border-saccent-500 text-white shadow-[0_0_20px_rgb(var(--stealth-accent)_/_0.6)]"
                 : isAurora
                 ? "bg-gradient-to-br from-white to-zinc-100 dark:from-zinc-800 dark:to-zinc-900 text-foreground border-2 border-white/80 dark:border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
                 : "bg-primary text-primary-foreground",
-              (!canSpin || internalSpinning) && "opacity-80 cursor-not-allowed"
+              (!canSpin && !!onSpin) && "opacity-80 cursor-not-allowed"
             )}
           >
             {internalSpinning ? (
-              <Sparkles className="w-6 h-6 animate-spin text-primary" />
+              <Sparkles className={cn("animate-spin text-primary", isSmall ? "w-5 h-5" : "w-6 h-6")} />
             ) : (
               <>
-                <span className="text-base sm:text-lg leading-none">🎰</span>
-                <span className="mt-0.5 text-[10px] sm:text-[11px] font-black leading-none">
-                  {canSpin ? "КРУТИТЬ" : "ЖДЁМ"}
+                <span className={cn(isSmall ? "text-sm" : "text-base sm:text-lg", "leading-none")}>🎰</span>
+                <span className={cn(isSmall ? "text-[9px]" : "text-[10px] sm:text-[11px]", "font-black leading-none mt-0.5")}>
+                  {canSpin || !onSpin ? "КРУТИТЬ" : "ЖДЁМ"}
                 </span>
               </>
             )}
