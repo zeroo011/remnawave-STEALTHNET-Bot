@@ -40,39 +40,39 @@ test("spa-html: replaceOrInsertMeta inserts missing meta tags before </head>", (
 });
 
 test("spa-html: escapeAttr and escapeHtml correctly sanitize special characters", () => {
-  const raw = `Ghost "Test" & <Special>`;
-  assert.equal(escapeAttr(raw), "Ghost &quot;Test&quot; &amp; &lt;Special&gt;");
-  assert.equal(escapeHtml(raw), "Ghost &quot;Test&quot; &amp; &lt;Special&gt;");
+  const raw = `Custom "Test" & <Special>`;
+  assert.equal(escapeAttr(raw), "Custom &quot;Test&quot; &amp; &lt;Special&gt;");
+  assert.equal(escapeHtml(raw), "Custom &quot;Test&quot; &amp; &lt;Special&gt;");
 });
 
 test("spa-html: renderHtml overrides old hardcoded tags with dynamic DB values", () => {
   const hardcodedTpl = `<!DOCTYPE html>
 <html lang="ru">
   <head>
-    <title>GhostNet</title>
-    <meta name="description" content="GhostNet - старое описание" />
-    <meta property="og:title" content="GhostNet" />
-    <meta property="og:description" content="GhostNet - старое описание" />
-    <meta property="og:image" content="https://ghostnet.store/preview.png" />
+    <title>OldBrand</title>
+    <meta name="description" content="OldBrand - старое описание" />
+    <meta property="og:title" content="OldBrand" />
+    <meta property="og:description" content="OldBrand - старое описание" />
+    <meta property="og:image" content="https://vpn.example.com/preview.png" />
   </head>
   <body><div id="root"></div></body>
 </html>`;
 
   const brand = {
-    brand: "GhostNet",
-    description: "GhostNet — самый быстрый и безопасный VPN",
-    ogImage: "https://ghostnet.store/api/public/brand/og-image.png",
-    publicAppUrl: "https://ghostnet.store",
+    brand: "AcmeVPN",
+    description: "AcmeVPN — самый быстрый и безопасный VPN",
+    ogImage: "https://vpn.example.com/api/public/brand/og-image.png",
+    publicAppUrl: "https://vpn.example.com",
   };
 
   const res = renderHtml(hardcodedTpl, brand);
-  assert.ok(res.includes("<title>GhostNet</title>"));
-  assert.ok(res.includes('<meta property="og:description" content="GhostNet — самый быстрый и безопасный VPN" />'));
-  assert.ok(res.includes('<meta name="description" content="GhostNet — самый быстрый и безопасный VPN" />'));
-  assert.ok(res.includes('<meta property="og:image" content="https://ghostnet.store/api/public/brand/og-image.png" />'));
-  assert.ok(res.includes('<meta property="og:url" content="https://ghostnet.store/" />'));
+  assert.ok(res.includes("<title>AcmeVPN</title>"));
+  assert.ok(res.includes('<meta property="og:description" content="AcmeVPN — самый быстрый и безопасный VPN" />'));
+  assert.ok(res.includes('<meta name="description" content="AcmeVPN — самый быстрый и безопасный VPN" />'));
+  assert.ok(res.includes('<meta property="og:image" content="https://vpn.example.com/api/public/brand/og-image.png" />'));
+  assert.ok(res.includes('<meta property="og:url" content="https://vpn.example.com/" />'));
   assert.ok(res.includes('<meta name="twitter:card" content="summary_large_image" />'));
-  assert.ok(!res.includes("GhostNet - старое описание"));
+  assert.ok(!res.includes("OldBrand - старое описание"));
   assert.ok(!res.includes("preview.png"));
 });
 
@@ -86,18 +86,18 @@ test("spa-html: resolveOgImage fallback logic (ogImage -> favicon -> logo -> def
     return publicAppUrl ? `${publicAppUrl}/apple-touch-icon.png` : `/apple-touch-icon.png`;
   }
 
-  const host = "https://ghostnet.store";
+  const host = "https://vpn.example.com";
 
   // 1. Кастомный ogImage задан
   assert.equal(
     testFallback({ ogImage: "data:image/png;base64,123", favicon: "data:image/png;base64,456" }, host),
-    "https://ghostnet.store/api/public/brand/og-image.png"
+    "https://vpn.example.com/api/public/brand/og-image.png"
   );
 
   // 2. ogImage не задан, есть favicon -> fallback на фавикон
   assert.equal(
     testFallback({ ogImage: null, favicon: "data:image/png;base64,456" }, host),
-    "https://ghostnet.store/api/public/brand/og-image.png"
+    "https://vpn.example.com/api/public/brand/og-image.png"
   );
 
   // 3. Прямой URL картинки
@@ -109,7 +109,7 @@ test("spa-html: resolveOgImage fallback logic (ogImage -> favicon -> logo -> def
   // 4. Нет картинок вообще, но есть publicAppUrl -> эндпоинт /api/public/brand/og-image.png
   assert.equal(
     testFallback({ ogImage: null, favicon: null, logo: null }, host),
-    "https://ghostnet.store/api/public/brand/og-image.png"
+    "https://vpn.example.com/api/public/brand/og-image.png"
   );
 
   // 5. Ни картинок, ни publicAppUrl -> относительный путь
