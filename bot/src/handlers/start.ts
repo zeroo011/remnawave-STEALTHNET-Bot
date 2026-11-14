@@ -405,6 +405,7 @@ export async function handleStart(ctx: Context, payload: string) {
       showExtraOptions: config?.sellOptionsEnabled === true && (config?.sellOptions?.length ?? 0) > 0,
       menuMode: config?.botMenuMode ?? "classic",
       groupCabinet: config?.botGroupCabinet === true,
+      groupCabinetItems: config?.botGroupCabinetItems,
       buttonsPerRow: config?.botButtonsPerRow ?? 1,
       remnaSubscriptionUrl: config?.useRemnaSubscriptionPage ? vpnUrl : null,
     });
@@ -535,6 +536,7 @@ async function showMainMenuScreen(
     showExtraOptions: config?.sellOptionsEnabled === true && (config?.sellOptions?.length ?? 0) > 0,
     menuMode: config?.botMenuMode ?? "classic",
   groupCabinet: config?.botGroupCabinet === true,
+  groupCabinetItems: config?.botGroupCabinetItems,
     buttonsPerRow: config?.botButtonsPerRow ?? 1,
     remnaSubscriptionUrl: config?.useRemnaSubscriptionPage ? vpnUrl : null,
   });
@@ -657,6 +659,7 @@ composer.command("link", async (ctx) => {
         showExtraOptions: config?.sellOptionsEnabled === true && (config?.sellOptions?.length ?? 0) > 0,
         menuMode: config?.botMenuMode ?? "classic",
       groupCabinet: config?.botGroupCabinet === true,
+      groupCabinetItems: config?.botGroupCabinetItems,
         buttonsPerRow: config?.botButtonsPerRow ?? 1,
         remnaSubscriptionUrl: config?.useRemnaSubscriptionPage ? vpnUrl : null,
       });
