@@ -27,7 +27,7 @@
   `git@github.com:zeroo011/remnawave-STEALTHNET-Bot.git`  
   *Remote имя:* `fork`
 - **Актуальная рабочая ветка:** `main` (синхронизирована с `origin/main` и `fork/main`).
-- **Текущий HEAD коммит:** `dd50b52` (*perf: prefetch the landing chunk together with the public config, PR #275*).
+- **Текущий HEAD коммит:** `ea66c6d` (*fix(settings): replace datalist with model combobox for groq models, PR #307 / #308*).
 
 ---
 
@@ -349,6 +349,51 @@
   - Миграции БД: реквизиты вывода СБП/карт (`20261106000000_withdrawal_sbp_and_card`) и таблица состояний выдачи заказов (`20261109090000_payment_delivery`).
   - Том `bot_preferences` и переменная `BOT_WIDGET_PREFERENCES_DIR` в `docker-compose.yml`.
 
+### 4.23. Редактор подписок в БД, Make-Primary и самовосстановление слотов (PR #293, коммиты `daf03ef`, `fe7a668`)
+- В панели администратора добавлен редактор подписок клиента в БД (`backend/src/modules/admin/subscriptions.routes.ts`, `frontend/src/pages/client-subscriptions.tsx`).
+- Позволяет вручную перепривязывать тарифы, корректировать трафик/даты и безопасно восстанавливать синхронизацию.
+- Действие «Сделать основной» (make-primary): перенос подписки в слот `0` без потери связей с Remnawave UUID.
+- Механизм самовосстановления слотов: устраняет дублирование индексов и восстанавливает целостность подписок.
+
+### 4.24. Автоматическое удаление неактивных триалов (PR #301 / Issue #294, коммит `9ab89a4`)
+- Фоновый процесс очистки: добавлен планировщик `backend/src/modules/trial/trial-cleanup.scheduler.ts`.
+- Удаляет неактивных пользователей пробного периода по истечении настраиваемого срока (по умолчанию 30 дней), если клиент так и не оплатил ни один платный тариф.
+- Освобождает слоты в локальной БД и удаляет неактивные аккаунты из Remnawave, снижая нагрузку на синхронизацию.
+- Настройка срока автоудаления вынесена в админ-панель.
+
+### 4.25. Добавление утилиты make в скрипт установки и README (PR #303 / Issue #296, коммит `95185f9`)
+- Скрипт `install.sh`: добавлена автоматическая проверка и установка пакета `make` для пакетных менеджеров `apt`, `dnf`/`yum` и `pacman`.
+- Обновлены инструкции по быстрому запуску во всех локалях `README.md` (`ru`, `en`, `cn`, `fa`).
+
+### 4.26. Брендированные резервные копии StealthNet (PR #304 / Issue #297, коммит `5ea8603`)
+- Резервное копирование (`backend/src/modules/backup/backup.service.ts`):
+  - Оформление уведомлений в Telegram в фирменном стиле StealthNet: указание версии панели, версии Remnawave, размера архива, контрольной суммы SHA-256 и служебных тегов `#backup` / `#stealthnet_backup`.
+  - Отдельные структурированные сообщения для частей многотомного архива, манифеста и уведомлений об ошибках.
+  - Версия панели записывается в манифест бэкапа и в заголовок SQL-дампа.
+
+### 4.27. Настраиваемый список сгруппированных разделов кабинета (PR #305 / Issue #298, коммит `7e666e1`)
+- Добавлена настройка `botGroupCabinetItems` в настройки бота (`bot-tab.tsx`, `client.service.ts`).
+- При включённой опции «Разделы внутри личного кабинета» администратор может выбрать, какие именно пункты переносятся внутрь экрана «Профиль», а какие остаются в главном меню бота.
+- Поддерживается сброс к значениям по умолчанию (`DEFAULT_CABINET_GROUPED_IDS`).
+
+### 4.28. Кнопка «Назад» в профиль для сгруппированных разделов (PR #306 / Issue #299, коммит `851b0b8`)
+- В разделах, перенесённых в профиль личного кабинета, в нижней строке навигации рядом с кнопкой «Главное меню» добавлена кнопка «Назад» (`backProfile`), возвращающая в `menu:profile`.
+- Настройка цвета кнопки в разделе «Цвета вторичных кнопок» (по умолчанию `danger`) и эмодзи (`BACK_TO_PROFILE`).
+- Разделы, не входящие в группу профиля, сохраняют стандартную одиночную кнопку возврата в главное меню.
+
+### 4.29. Устранение мигания темы (FOUC) и переключатель тем в кабинете (PR #308 / Issue #302, коммит `a5c73f9`)
+- Устранён эффект Flash of Unstyled Content (FOUC): в `<head>` `frontend/index.html` добавлен синхронный скрипт, применяющий тему (`light`/`dark`/`system`) и цвет `theme-color` до запуска и гидратации React.
+- В контексте темы (`frontend/src/contexts/theme.tsx`) и политике тем (`theme-policy.ts`) реализована синхронная инициализация и кэширование темы в `localStorage`.
+- В верхнюю панель кабинета (`frontend/src/pages/cabinet/cabinet-layout.tsx`) возвращён компонент `ThemePopover` для выбора режима (светлая/тёмная/системная) и цветового акцента.
+- В настройках панели убран принудительный лок `allowUserThemeChange: false` и добавлен переключатель для администратора.
+
+### 4.30. Полноценный Combobox выбора AI-моделей Groq (PR #307 / Issue #300, коммиты `7a23424`, `64bf8b8`, `ea66c6d`)
+- Заменён нативный HTML `<datalist>` на кастомный компонент `ModelCombobox` (`frontend/src/components/model-combobox.tsx`).
+- Добавлена кнопка со стрелкой `ChevronDown`, открывающая полный список доступных моделей (`availableModels`) без фильтрации по текущему значению поля (решена проблема невозможности просмотреть модели при уже заполненном поле).
+- Сохранена возможность свободного ручного ввода с клавиатуры любого названия модели.
+- Добавлена поддержка выбора пустого значения («Без резервной модели») для трёх резервных моделей.
+- Обновлён список актуальных моделей Groq по умолчанию (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `deepseek-r1-distill-llama-70b`, `deepseek-r1-distill-qwen-32b`, `qwen/qwen3.8-27b`, `qwen-2.5-coder-32b`, `mixtral-8x7b-32768`, `gemma2-9b-it`).
+
 
 
 ---
@@ -386,22 +431,22 @@ cp nginx/nginx.conf.local_backup nginx/nginx.conf
 git diff
 
 # 3. Пересборка Docker образов
-docker compose build api bot frontend
+docker compose --profile builtin-nginx build
 
-# 4. Обновление статики фронтенда в volume
-docker compose up --no-deps frontend
+# 4. Запуск и обновление сервисов (API применит миграции Prisma при старте, frontend обновит статику в volume)
+docker compose --profile builtin-nginx up -d --no-build
+docker compose --profile builtin-nginx up -d --no-deps --no-build --force-recreate broadcast-worker
+docker compose restart bot
 
-# 5. Перезапуск API, Bot и Broadcast Worker (API сам применит миграции Prisma при старте)
-docker compose up -d --no-deps api broadcast-worker bot
+# 5. Перезагрузка Nginx (при обновлении конфига или статики)
+docker exec stealthnet-nginx nginx -s reload
 
-# 6. Перезагрузка Nginx
-docker compose exec nginx nginx -s reload
-
-# 7. Проверка статуса сервисов
-docker ps
+# 6. Проверка статуса сервисов
+docker compose --profile builtin-nginx ps
 docker logs --tail 30 stealthnet-api
 docker logs --tail 30 stealthnet-bot
-curl -s https://ghostnet.store/api/health
+curl -s http://127.0.0.1:5000/api/health
+curl -sI https://ghostnet.store/
 ```
 
 ---
