@@ -5865,6 +5865,7 @@ export interface PublicConfig {
   trialDays?: number;
   themeAccent?: string;
   themeMode?: "light" | "dark" | "system";
+  allowUserThemeChange?: boolean;
   ticketsEnabled?: boolean;
   sellOptionsEnabled?: boolean;
   sellOptions?: PublicSellOption[];
