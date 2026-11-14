@@ -3800,11 +3800,14 @@ export type UpdateSettingsPayload = {
   supportLink?: string | null;
   agreementLink?: string | null;
   offerLink?: string | null;
+  agreementTitle?: string | null;
+  offerTitle?: string | null;
   instructionsLink?: string | null;
   /** ссылка инструкции по рефералке. */
   referralInstructionsUrl?: string | null;
   // T11+T13+T14 (11.05.2026): кастомизация
   refundLink?: string | null;
+  refundTitle?: string | null;
   supportHoursFrom?: string | null;
   supportHoursTo?: string | null;
   tgProxyText?: string | null;
@@ -4374,11 +4377,14 @@ export interface AdminSettings {
   supportLink?: string | null;
   agreementLink?: string | null;
   offerLink?: string | null;
+  agreementTitle?: string | null;
+  offerTitle?: string | null;
   instructionsLink?: string | null;
   /** ссылка инструкции по рефералке. */
   referralInstructionsUrl?: string | null;
   // T11+T13+T14 (11.05.2026): кастомизация
   refundLink?: string | null;
+  refundTitle?: string | null;
   supportHoursFrom?: string | null;
   supportHoursTo?: string | null;
   tgProxyText?: string | null;
@@ -5823,7 +5829,10 @@ export interface PublicConfig {
   instructionsLink?: string | null;
   agreementLink?: string | null;
   offerLink?: string | null;
+  agreementTitle?: string | null;
+  offerTitle?: string | null;
   refundLink?: string | null;
+  refundTitle?: string | null;
   supportHoursFrom?: string | null;
   supportHoursTo?: string | null;
   helpIntroText?: string | null;
