@@ -979,7 +979,34 @@ function ClientEditModal({
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[1180px] w-[96vw] max-h-[92vh] overflow-y-auto p-0 gap-0 bg-card border border-border sm:rounded-2xl [&>button]:z-50">
+      <DialogContent
+        className="max-w-[1180px] w-[96vw] max-h-[92vh] overflow-y-auto p-0 gap-0 bg-card border border-border sm:rounded-2xl [&>button]:z-50"
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (
+            target?.closest("[data-payment-drawer]") ||
+            target?.closest("[data-payment-drawer-backdrop]") ||
+            target?.closest("[data-pwa-block-update]")
+          ) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (
+            target?.closest("[data-payment-drawer]") ||
+            target?.closest("[data-payment-drawer-backdrop]") ||
+            target?.closest("[data-pwa-block-update]")
+          ) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          if (document.querySelector("[data-payment-drawer]")) {
+            e.preventDefault();
+          }
+        }}
+      >
         
         
         <div className="px-5 py-[17px] border-b border-border relative z-10 bg-card">

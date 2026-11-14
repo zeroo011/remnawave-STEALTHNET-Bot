@@ -64,6 +64,19 @@ export function PaymentActionsDrawer({ paymentId, onClose, onRefreshList }: Prop
       .finally(() => setLoading(false));
   }, [paymentId, state.accessToken]);
 
+  useEffect(() => {
+    if (!paymentId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [paymentId, onClose]);
+
   if (!paymentId) return null;
 
   async function reload() {
@@ -151,8 +164,19 @@ export function PaymentActionsDrawer({ paymentId, onClose, onRefreshList }: Prop
   // топбара/сайдбара, оказываясь визуально под ними.
   return createPortal(
     <>
-      <div data-pwa-block-update className="fixed inset-0 z-[80] bg-black/40" onClick={onClose} />
+      <div
+        data-payment-drawer-backdrop
+        data-pwa-block-update
+        className="fixed inset-0 z-[80] bg-black/40 cursor-pointer"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+      />
       <aside
+        data-payment-drawer
+        onPointerDown={(e) => e.stopPropagation()}
         className={cn(
           "fixed right-0 top-0 z-[81] h-screen w-full sm:w-[480px] max-w-full overflow-y-auto",
           "bg-slate-200/80 dark:bg-slate-950/80 border-l border-border dark:border-border",
@@ -164,7 +188,16 @@ export function PaymentActionsDrawer({ paymentId, onClose, onRefreshList }: Prop
             <h3 className="text-sm font-bold tracking-tight text-foreground">Действия с платежом</h3>
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">{paymentId.slice(0, 24)}…</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="rounded-xl"
+          >
             <X className="h-4 w-4" />
           </Button>
         </header>
