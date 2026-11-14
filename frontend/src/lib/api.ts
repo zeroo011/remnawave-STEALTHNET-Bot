@@ -1091,6 +1091,9 @@ export const api = {
   async getClientSubscriptionsList(token: string, clientId: string): Promise<{ items: AdminClientSubscriptionItem[] }> {
     return request(`/admin/clients/${clientId}/subscriptions`, { token });
   },
+  async getClientPayments(token: string, clientId: string): Promise<{ items: AdminClientPaymentItem[] }> {
+    return request(`/admin/clients/${clientId}/payments`, { token });
+  },
   async getSubscriptionRemna(token: string, subId: string): Promise<unknown> {
     return request(`/admin/subscriptions/${subId}/remna`, { token });
   },
@@ -4104,6 +4107,25 @@ export interface UpdateSubscriptionDbPayload {
   autoRenewEnabled?: boolean;
   extraDevices?: number;
   syncToClient?: boolean;
+}
+
+export interface AdminClientPaymentItem {
+  id: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  provider: string;
+  tariffId: string | null;
+  tariffName: string | null;
+  subscriptionId: string | null;
+  subscriptionIndex: number | null;
+  deviceCount: number | null;
+  hasActivationError: boolean;
+  activationError: string | null;
+  paymentType: string | null;
+  createdAt: string;
+  paidAt: string | null;
 }
 
 export interface RemnaUserFull {

@@ -12,6 +12,7 @@ import {
   useAdminClientAllDevices,
   useAdminClientSubsOverview,
   useAdminClientSubscriptionsList,
+  useAdminClientPayments,
   useAdminClientRemna,
   useAdminClientRemnaUsage,
   useAdminSettings,
@@ -43,13 +44,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Pencil, Trash2, Ban, ShieldCheck, ShieldAlert, ShieldOff, Wifi, Ticket, KeyRound, Search,
   Copy, Check, Smartphone, Activity, User, Users, HardDrive, Link,
-  RefreshCw, Loader2, Package, Gift, Coins, MailX, MailCheck, RotateCw, Plus, Zap,
+  RefreshCw, Loader2, Package, Gift, Coins, MailX, MailCheck, RotateCw, Plus, Zap, CreditCard,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { clientsBulkApi, type BulkClientAction } from "@/lib/admin-extras-api";
 import { ClientSubscriptionsTab } from "@/components/admin/client-subscriptions-tab";
+import { ClientPaymentsTab } from "@/components/admin/client-payments-tab";
 import { fmtMsk, fmtMskDate } from "@/lib/datetime";
 
 function formatTrafficBytes(bytes: number | null | undefined): string {
@@ -796,6 +798,8 @@ function ClientEditModal({
   const canManageServices = state.admin?.role === "ADMIN" || (Array.isArray(state.admin?.allowedSections) && state.admin.allowedSections.includes("action:manage_services"));
   const canReset2Fa = state.admin?.role === "ADMIN" || (Array.isArray(state.admin?.allowedSections) && state.admin.allowedSections.includes("action:reset_client_2fa"));
   const [tab, setTab] = useState("profile");
+  const clientPaymentsQuery = useAdminClientPayments(token, editing.id);
+  const clientPaymentsTotal = clientPaymentsQuery.data?.items?.length ?? 0;
   const queryClient = useQueryClient();
   const [reset2FaOpen, setReset2FaOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
@@ -1093,6 +1097,17 @@ function ClientEditModal({
             <TabsList className="flex flex-wrap gap-1.5 bg-muted border border-border rounded-xl p-1.5 justify-start">
               <TabsTrigger value="profile" className="gap-1.5 text-xs rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
                 <User className="h-3.5 w-3.5" /> {t("admin.clients.info")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="payments"
+                className="gap-1.5 text-xs rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+              >
+                <CreditCard className="h-3.5 w-3.5" /> {t("admin.clients.payments_tab", "Платежи")}
+                {clientPaymentsTotal > 0 && (
+                  <span className="ml-1 rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary">
+                    {clientPaymentsTotal}
+                  </span>
+                )}
               </TabsTrigger>
               {/* после унификации Client.remnawaveUuid может быть null,
                   но у клиента есть Subscription[0].remnawaveUuid. Показываем вкладки если ЕСТЬ
@@ -1743,6 +1758,10 @@ function ClientEditModal({
                 <hr />
                 <TariffRestrictionsSection clientId={editing.id} editing={editing} token={token} />
               </div>
+            </TabsContent>
+
+            <TabsContent value="payments">
+              <ClientPaymentsTab clientId={editing.id} token={token} />
             </TabsContent>
 
             {/*  Подписки (T-subscription-remna, 14.05.2026) 
