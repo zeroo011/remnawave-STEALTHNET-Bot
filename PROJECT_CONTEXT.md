@@ -394,6 +394,52 @@
 - Добавлена поддержка выбора пустого значения («Без резервной модели») для трёх резервных моделей.
 - Обновлён список актуальных моделей Groq по умолчанию (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `deepseek-r1-distill-llama-70b`, `deepseek-r1-distill-qwen-32b`, `qwen/qwen3.8-27b`, `qwen-2.5-coder-32b`, `mixtral-8x7b-32768`, `gemma2-9b-it`).
 
+### 4.31. Онбординг-тур на мобильных, чекаут за 0 ₽ и глобальный тумблер туров (PR #310, коммит `470d7f8`)
+- **P0 — Мобильная навигация тура (`cabinet-layout.tsx`):**
+  - В `navigation()` убран тернарник `mobile ? undefined` — `data-tour` теперь всегда проставляется для элементов навигации.
+  - В мобильном `cabinet-bottom-nav` добавлены атрибуты `data-tour` на все `Link`.
+  - Меню «Ещё» содержит целевые атрибуты, подсказка `OverflowHint` находит элемент, темный оверлей больше не зависает и не блокирует экран.
+- **P1 — Чекаут за 0 ₽ (`client-tariffs.tsx`):**
+  - При `finalPrice <= 0` внешние платежные шлюзы скрываются.
+  - Кнопка оплаты с баланса активна (`disabled={payLoading || (!hasBalance && !isFree)}`) с текстом «Получить бесплатно» и суммой 0 ₽.
+- **P2 — Автоматический редирект после оплаты (`client-tariffs.tsx`):**
+  - В `onBalancePaid` добавлен вызов `navigate("/cabinet/dashboard")` после всплывающего тоста и обновления состояния подписок.
+- **P3 — Аварийный fallback (`dashboard-tour.tsx`):**
+  - В `OverflowHint` добавлен таймаут 2 000 мс: если цель шага не найдена (`pos === null`), вызывается `onNavigated(true)`.
+  - В родителе добавлен `resumeAfterOverflow` (сброс `navigatingRef`, `pendingStepRef`, переход к следующему шагу с учётом его `route` или завершение тура) и страховочный таймер 2 500 мс на случай неоткрытия меню.
+- **Глобальный переключатель тура (`tour.routes.ts`, `client.routes.ts`, `tour-constructor.tsx`):**
+  - Ключ `tour_enabled` в `SYSTEM_CONFIG_KEYS`, поле `tourEnabled: map.tour_enabled !== "false"`.
+  - Эндпоинты `GET /admin/tour-steps` (возвращает статус `enabled`) и `PUT /admin/tour-steps/status` с Zod-валидацией и сбросом кэша.
+  - Публичный `/client/tour-steps` при выключенном туре возвращает `{ items: [] }`.
+  - В шапке конструктора туров в админке добавлен переключатель Switch с мгновенным обновлением кэша React Query.
+
+### 4.32. Настраиваемые названия и ссылки юридических документов и поддержки (PR #311 / Issue #309, коммит `156dbef`)
+- **Бэкенд:**
+  - Новые ключи `agreement_title`, `offer_title`, `refund_title` в `SYSTEM_CONFIG_KEYS`, валидация и сохранение в `SystemSetting`.
+  - `getPublicConfig()` отдаёт `agreementTitle`, `offerTitle`, `refundTitle` в веб-кабинет и бот.
+  - `botTerms()` возвращает `title` для каждого документа. Хэш версии согласия рассчитывается строго по `kind + url`, благодаря чему переименование кнопки не требует повторного согласия от пользователей.
+- **Telegram-бот:**
+  - Меню документов `documentsSubMenu` и поддержки `supportSubMenu` принимают кастомные названия кнопок с локализованными fallback-значениями.
+  - Terms Gate использует динамический заголовок: `doc.title` -> `labels[kind]` -> `kind`.
+- **Фронтенд:**
+  - В админ-панели («Ссылки и поддержка») для Пользовательского соглашения, Публичной оферты и Политики возврата добавлены раздельные поля «Название кнопки» и «Ссылка на документ» с подробными подсказками.
+  - Кастомные названия кнопок документов отображаются во всех темах кабинета (Classic, Stealth, Aurora), в меню бота в кабинете и футере.
+
+### 4.33. История платежей в карточке клиента (PR #312, коммит `6daafd5`)
+- **Бэкенд (`clients.routes.ts`):**
+  - Добавлен эндпоинт `GET /admin/clients/:id/payments` с валидацией CUID.
+  - Выборка платежей клиента с сортировкой по `createdAt desc` и связями `tariff`, `subscription`, `delivery`.
+  - Безопасный парсинг `metadata`: извлечение `activationError` и `paymentType` (с нормализацией `metadata.type = "balance_topup"`).
+  - Вычисление флага ошибки активации `hasActivationError` (сбой доставки или оплачено без подписки с ошибкой).
+- **Фронтенд:**
+  - Тип `AdminClientPaymentItem`, метод `api.getClientPayments` и хук React Query `useAdminClientPayments`.
+  - Отдельный модульный компонент `frontend/src/components/admin/client-payments-tab.tsx`:
+    - Сводка LTV клиента по валютам и счётчики платежей по статусам.
+    - Таблица платежей с бейджами провайдеров (`yookassa`, `stars`, `cryptopay`, `platega`, `balance` и др.), статусов (`PAID`, `PENDING`, `FAILED`, `REFUNDED`), названиями тарифов/услуг и датой по МСК.
+    - Интеграция с `PaymentActionsDrawer` (повтор активации, возврат на баланс, отметка FAILED) и удаление с подтверждением через `adminConfirm`.
+  - В карточке клиента (`ClientEditModal` в `frontend/src/pages/clients.tsx`) добавлена вкладка «Платежи» с динамическим бейджем количества платежей, доступная для всех клиентов.
+  - Добавлена полная двуязычная локализация (`ru.json`, `en.json`).
+
 
 
 ---
